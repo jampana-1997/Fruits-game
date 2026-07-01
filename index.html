@@ -1,186 +1,166 @@
-const canvas = document.getElementById("canvas");
-const ctx = canvas.getContext("2d");
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fruit Slice Game</title>
 
-canvas.width = 400;
-canvas.height = 600;
-
-let score = 0;
-let gameOver = false;
-
-const fruits = [];
-const bombs = [];
-const slices = [];
-
-class Fruit{
-
-constructor(){
-
-this.x = Math.random()*320+40;
-this.y = 650;
-
-this.radius = 25+Math.random()*10;
-
-this.vx = (Math.random()-0.5)*6;
-this.vy = -(12+Math.random()*5);
-
-this.gravity = 0.25;
-
-const colors=[
-"#ff0000",
-"#00ff00",
-"#ffff00",
-"#ff00ff",
-"#00ffff",
-"#ff8800"
-];
-
-this.color=colors[Math.floor(Math.random()*colors.length)];
-
-this.cut=false;
-
+<style>
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
 }
 
-update(){
-
-this.x+=this.vx;
-this.y+=this.vy;
-this.vy+=this.gravity;
-
+body{
+overflow:hidden;
+background:linear-gradient(#87CEEB,#4CAF50);
+font-family:Arial;
 }
 
-draw(){
-
-ctx.beginPath();
-ctx.fillStyle=this.color;
-ctx.arc(this.x,this.y,this.radius,0,Math.PI*2);
-ctx.fill();
-
+canvas{
+display:block;
 }
 
+#score{
+position:absolute;
+top:20px;
+left:20px;
+font-size:32px;
+color:#fff;
+font-weight:bold;
+text-shadow:2px 2px 5px black;
 }
 
-function spawnFruit(){
+#gameover{
+position:absolute;
+top:50%;
+left:50%;
+transform:translate(-50%,-50%);
+font-size:50px;
+color:red;
+display:none;
+font-weight:bold;
+text-align:center;
+}
+</style>
+</head>
+<body>
 
-fruits.push(new Fruit());
+<div id="score">Score : 0</div>
+<div id="gameover">
+GAME OVER<br><br>
+Refresh to Play Again
+</div>
+
+<canvas id="game"></canvas>
+
+<script>
+const canvas=document.getElementById("game");
+const ctx=canvas.getContext("2d");
+
+canvas.width=window.innerWidth;
+canvas.height=window.innerHeight;
+
+let score=0;
+let gameOver=false;
+
+const fruits=["🍎","🍌","🍉","🍍","🍇","🥝","🍓","🍒"];
+
+let items=[];
+
+function spawn(){
+
+let bomb=Math.random()<0.15;
+
+items.push({
+x:Math.random()*canvas.width,
+y:canvas.height+50,
+speed:3+Math.random()*3,
+emoji:bomb?"💣":fruits[Math.floor(Math.random()*fruits.length)],
+bomb:bomb,
+size:55
+});
 
 }
 
 setInterval(()=>{
+if(!gameOver)
+spawn();
+},700);
 
-if(!gameOver){
+function draw(){
 
-spawnFruit();
+ctx.clearRect(0,0,canvas.width,canvas.height);
 
-}
+ctx.font="55px Arial";
 
-},800);
+for(let i=items.length-1;i>=0;i--){
 
-let mouseDown=false;
+let f=items[i];
 
-canvas.addEventListener("mousedown",()=>{
+f.y-=f.speed;
 
-mouseDown=true;
+ctx.fillText(f.emoji,f.x,f.y);
 
-});
-
-canvas.addEventListener("mouseup",()=>{
-
-mouseDown=false;
-
-});
-
-canvas.addEventListener("mousemove",e=>{
-
-if(!mouseDown)return;
-
-const rect=canvas.getBoundingClientRect();
-
-const mx=e.clientX-rect.left;
-const my=e.clientY-rect.top;
-
-slices.push({x:mx,y:my});
-
-if(slices.length>15){
-
-slices.shift();
+if(f.y<-60)
+items.splice(i,1);
 
 }
 
-fruits.forEach((fruit,index)=>{
-
-let dx=fruit.x-mx;
-let dy=fruit.y-my;
-
-let dist=Math.sqrt(dx*dx+dy*dy);
-
-if(dist<fruit.radius){
-
-fruits.splice(index,1);
-
-score++;
+requestAnimationFrame(draw);
 
 }
 
-});
+draw();
 
-});
+function slice(x,y){
 
-function drawSlice(){
+if(gameOver)return;
 
-ctx.strokeStyle="white";
-ctx.lineWidth=4;
+for(let i=items.length-1;i>=0;i--){
 
-ctx.beginPath();
+let f=items[i];
 
-for(let i=0;i<slices.length;i++){
+if(
+x>f.x &&
+x<f.x+50 &&
+y<f.y &&
+y>f.y-50
+){
 
-if(i==0){
+if(f.bomb){
 
-ctx.moveTo(slices[i].x,slices[i].y);
+gameOver=true;
+document.getElementById("gameover").style.display="block";
 
 }else{
 
-ctx.lineTo(slices[i].x,slices[i].y);
+score++;
+document.getElementById("score").innerHTML="Score : "+score;
+
+}
+
+items.splice(i,1);
 
 }
 
 }
 
-ctx.stroke();
-
 }
 
-function drawScore(){
+canvas.addEventListener("mousemove",(e)=>{
+slice(e.clientX,e.clientY);
+});
 
-ctx.fillStyle="white";
-ctx.font="28px Arial";
-ctx.fillText("Score : "+score,10,35);
+canvas.addEventListener("touchmove",(e)=>{
 
-}
+let t=e.touches[0];
 
-function animate(){
+slice(t.clientX,t.clientY);
 
-ctx.clearRect(0,0,400,600);
+});
+</script>
 
-for(let i=fruits.length-1;i>=0;i--){
-
-fruits[i].update();
-fruits[i].draw();
-
-if(fruits[i].y>700){
-
-fruits.splice(i,1);
-
-}
-
-}
-
-drawSlice();
-
-drawScore();
-
-requestAnimationFrame(animate);
-
-}
-
-animate();
+</body>
+</html>
